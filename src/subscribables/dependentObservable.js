@@ -2,6 +2,7 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
     var _latestValue,
         _hasBeenEvaluated = false,
         _isBeingEvaluated = false,
+        _hasValueChanged = false,
         readFunction = evaluatorFunctionOrOptions;
 
     if (readFunction && typeof readFunction == "object") {
@@ -97,17 +98,24 @@ ko.dependentObservable = function (evaluatorFunctionOrOptions, evaluatorFunction
                     _subscriptionsToDependencies.splice(i, 1)[0].dispose();
             }
             _hasBeenEvaluated = true;
+            _hasValueChanged = _latestValue !== newValue;
 
-            dependentObservable["notifySubscribers"](_latestValue, "beforeChange");
-            _latestValue = newValue;
-            if (DEBUG) dependentObservable._latestValue = _latestValue;
+            // Only notify observers if the value has changed.
+            if( _hasValueChanged ) {
+                dependentObservable["notifySubscribers"](_latestValue, "beforeChange");
+                _latestValue = newValue;
+                if (DEBUG) dependentObservable._latestValue = _latestValue;
+            }
         } finally {
             ko.dependencyDetection.end();
         }
 
-        dependentObservable["notifySubscribers"](_latestValue);
+        // Only notify observers if the value has changed.
+        if( _hasValueChanged )
+        {
+            dependentObservable["notifySubscribers"](_latestValue);
+        }
         _isBeingEvaluated = false;
-
     }
 
     function dependentObservable() {
